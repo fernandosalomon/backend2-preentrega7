@@ -43,33 +43,42 @@ proyecto-eventos/
 │ │   ├── events.router.js
 │ │   ├── health.router.js
 │ │   ├── users.router.js
+│ │   ├── tickets.router.js
 │ │   └── sessions.router.js
 │ ├── controllers/
 │ │   ├── events.controller.js
 │ │   ├── users.controller.js
+│ │   ├── tickets.controller.js
 │ │   └── sessions.controller.js
 │ ├── services/
 │ │   ├── events.services.js
+│ │   ├── tickets.services.js
 │ │   └── users.services.js
 │ ├── repositories/
 │ │   ├── index.js
 │ │   ├── BaseRepository.js
 │ │   ├── EventRepository.js
+│ │   ├── TicketRepository.js
 │ │   └── UserRepository.js
 │ ├── dao/
 │ │   ├── Events.dao.js
+│ │   ├── Tickets.dao.js
 │ │   └── Users.dao.js
 │ ├── models/
 │ │   ├── User.js
+│ │   ├── Ticket.js
 │ │   └── Event.js
 │ ├── middlewares/
 │ │   ├── authorize.middleware.js
 │ │   └── errorHandler.js
 │ ├── dto/
 │ │   ├── Event.dto.js
+│ │   ├── Ticket.dto.js
 │ │   └── User.dto.js
 │ ├── utils/
+│ │   ├── createTicketCode.js
 │ │   ├── customError.js
+│ │   ├── mailer.js
 │ │   ├── validators.js
 │ │   └── hash.js
 ├── .env.example
@@ -132,6 +141,22 @@ Cuenta con los siguientes campos:
 - price: Precio de inscripción o asistencia al evento (por defecto: 0)
 - status: Estado actual del evento. Puede ser draft, published, cancelled o finished (por defecto: draft)
 - organizer: Identificador del usuario responsable de organizar el evento (requerido)
+
+#### 4.3 Modelo Tickets
+
+El modelo `TicketModel` representa las reservas de entradas asociadas a un usuario y a un evento.
+
+Cuenta con los siguientes campos:
+
+- **user**: Identificador del usuario asociado a la reserva (requerido).
+- **event**: Identificador del evento al que corresponde la reserva (requerido).
+- **status**: Estado de la reserva. Admite los valores `confirmed`, `pending` y `cancelled` (por defecto: `active`).
+- **quantity**: Cantidad de entradas de la reserva (por defecto: 1; mínimo: 1).
+- **reservationCode**: Código único de la reserva (requerido).
+- **createdAt**: Fecha de creación, con valor predeterminado `null`.
+- **cancelledAt**: Fecha de cancelación, con valor predeterminado `null`.
+
+El esquema también habilita `timestamps` de Mongoose, que administra las fechas `createdAt` y `updatedAt`.
 
 ### 5. Inicialización de Passport
 
@@ -389,9 +414,13 @@ La configuración de secure permite utilizar HTTP durante el desarrollo local y 
 | `GET`   | `/api/health/`           | Verifica que el servidor esté activo  | Pública                                                    |
 | `GET`   | `/api/events/`           | Obtiene todos los eventos             | Pública                                                    |
 | `GET`   | `/api/events/:eid`       | Obtiene un evento por su ID           | Pública                                                    |
+| `POST`  | `/api/events/:eid/tickets` | Inscribe al usuario en un evento      | Requiere autenticación                                     |
+| `GET`   | `/api/events/:eid/tickets` | Lista los tickets de un evento        | Requiere autenticación y rol `organizer` o `admin`         |
 | `POST`  | `/api/events/`           | Crea un evento nuevo                  | Requiere autenticación y rol `organizer` o `admin`         |
 | `PUT`   | `/api/events/:eid`       | Actualiza un evento completo          | Requiere usuario autenticado con rol `organizer` o `admin` |
 | `PATCH` | `/api/events/:eid`       | Actualiza el estado de un evento      | Requiere usuario autenticado con rol `organizer` o `admin` |
+| `GET`   | `/api/tickets/my-tickets` | Obtiene los tickets del usuario autenticado | Requiere autenticación; roles `user`, `organizer` o `admin` |
+| `PATCH` | `/api/tickets/:tid/cancel` | Cancela un ticket                     | Requiere autenticación y rol `organizer` o `admin`         |
 | `POST`  | `/api/sessions/register` | Registra un nuevo usuario             | Pública                                                    |
 | `POST`  | `/api/sessions/login`    | Inicia sesión de usuario              | Pública                                                    |
 | `GET`   | `/api/sessions/current`  | Obtiene el usuario autenticado actual | Requiere usuario autenticado                               |
